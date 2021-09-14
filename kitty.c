@@ -3,11 +3,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <ctype.h>
+#include <string.h> 
 
 #define BATCHSIZE 4096
 
-void printMSG (int readCount,int writeCount,int byteCount,char * filename){
-    fprintf(stderr, "the file %s transferred %d bytes and read %d times and wrote %d times\n",filename,byteCount,readCount,writeCount); 
+void printMSG (int readCount,int writeCount,int byteCount,char * filename, bool binary){
+    fprintf(stderr, "The file %s transferred %d bytes and read %d times and wrote %d times\n",strcmp(filename,"-") == 0 ? "standard input":filename,byteCount,readCount,writeCount); 
+    if(binary)
+        fprintf(stderr,"WARNING THE FILE %s CONTAINS BINARY DATA\n",filename); 
 }
 
 void openError(char* fileName){
@@ -30,13 +34,14 @@ void partialWrite(int* writeCount, int* outputFileD, char* buf, int readLen,int 
         writeError(inputFileName); 
 }
 
-void checkForBinary(char* buf, char* fileName){
-    for(int i = 0; i<BATCHSIZE; i++){
+bool checkForBinary(char* buf, char* fileName, int size){
+    for(int i = 0; i<size; i++){
         if(!(isprint(buf[i])||isspace(buf[i]))){
-            fprintf(stderr,"WARNING file %s contains binary characters\n",fileName); 
+            return true; 
             break; 
         }
     }
+    return false; 
 }
 
 void concatenate(int* outputFileD, char* inputFileName){
@@ -46,22 +51,25 @@ void concatenate(int* outputFileD, char* inputFileName){
     int byteCount,writeCount = 0;  
     int n = read(fdI,buf,BATCHSIZE);
     int readCount = 1; 
-    checkForBinary(buf,inputFileName);
-    do{
+    bool binary = false; 
+    while(n > 0) {
+        binary = binary ? binary : checkForBinary(buf,inputFileName,n);
         int wn = write(*outputFileD,buf,n); 
         if(wn != n)
             partialWrite(&writeCount, outputFileD,buf,n,wn,inputFileName); 
         byteCount += n; 
         writeCount++; 
+        if(n < BATCHSIZE) break;
         n = read(fdI,buf,BATCHSIZE);
         readCount++; 
-    } while(n > 0);
-    printMSG(readCount,writeCount,byteCount,inputFileName); 
+    }
+    printMSG(readCount,writeCount,byteCount,inputFileName,binary); 
 }
 
 int main(int argc, char *argv[]){
     int c; 
-    bool oFlag,once = false;
+    bool oFlag = false; 
+    bool once = false;
     int outputFile = STDOUT_FILENO;
     while ((c = getopt (argc, argv, "o::")) != -1){
         if(c == 'o') oFlag = true;
