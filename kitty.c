@@ -64,7 +64,7 @@ int main(int argc, char *argv[]){
     bool oFlag,once = false;
     int outputFile = STDOUT_FILENO;
     while ((c = getopt (argc, argv, "o::")) != -1){
-        if(c == 'o') oFlag = true; 
+        if(c == 'o') oFlag = true;
     }
     for(int i = optind; i<argc; i++){
         if(oFlag && i == optind){
