@@ -71,14 +71,17 @@ int main(int argc, char *argv[]){
     bool oFlag = false; 
     bool once = false;
     int outputFile = STDOUT_FILENO;
+    char* outputFileName = NULL; 
     while ((c = getopt (argc, argv, "o::")) != -1){
-        if(c == 'o') oFlag = true;
+        if(c == 'o') {
+            outputFileName = optarg;
+            outputFile = open(optarg,O_WRONLY|O_CREAT|O_TRUNC,0666);
+            oFlag = true; 
+        }
     }
     for(int i = optind; i<argc; i++){
-        if(oFlag && i == optind){
-            outputFile = open(argv[i],O_WRONLY|O_CREAT|O_TRUNC,0666); 
+        if(oFlag && strcmp(argv[i],outputFileName) == 0)
             continue; 
-        }
         once = true;
         concatenate(&outputFile,argv[i]); 
     }
