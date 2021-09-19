@@ -55,9 +55,7 @@ void concatenate(int* outputFileD, char* inputFileName){
     int fdI = strcmp(inputFileName,"-") != 0 ? open(inputFileName,O_RDONLY,0666) : STDIN_FILENO; // opens the input file 
     if(fdI < 0) openError(inputFileName); 
     char buf[BATCHSIZE]; 
-    int byteCount,writeCount = 0;  
-    int n = read(fdI,buf,BATCHSIZE);
-    int readCount = 1; 
+    int byteCount = 0,writeCount = 0,n = read(fdI,buf,BATCHSIZE),readCount = 1; 
     bool binary = false; 
     while(n > 0) { // while there is data to read
         binary = binary ? binary : checkForBinary(buf,inputFileName,n);
@@ -77,8 +75,7 @@ void concatenate(int* outputFileD, char* inputFileName){
 
 int main(int argc, char *argv[]){
     int c; 
-    bool oFlag = false; 
-    bool once = false;
+    bool oFlag = false,once = false;
     int outputFile = STDOUT_FILENO;
     char* outputFileName = NULL; 
     while ((c = getopt (argc, argv, "o:")) != -1){  // check for the o option 
