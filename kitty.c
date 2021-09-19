@@ -13,19 +13,19 @@
 void printMSG (int readCount,int writeCount,int byteCount,char * filename, bool binary){
     fprintf(stderr, "The file %s transferred %d bytes and read %d times and wrote %d times\n",strcmp(filename,"-") == 0 ? "standard input":filename,byteCount,readCount,writeCount); 
     if(binary)
-        fprintf(stderr,"WARNING THE FILE %s CONTAINS BINARY DATA\n",filename); 
+        fprintf(stderr,"WARNING THE FILE %s CONTAINS BINARY DATA\n",strcmp(filename,"-") == 0 ? "standard input":filename); 
 }
 
 //prints a message for an error opening a file 
-void openError(char* fileName){
-    fprintf(stderr, "Error opening file %s \n",fileName); 
+void openError(char* filename){
+    fprintf(stderr, "Error opening file %s \n",strcmp(filename,"-") == 0 ? "standard input":filename); 
     exit(-1); 
 }
 
 //prints an error for writting to a file 
-void writeError(char* fileName){
-    fprintf(stderr,"Error writing to file %s\n", fileName);
-    exit(-2); 
+void writeError(char* filename){
+    fprintf(stderr,"Error writing to file %s\n", strcmp(filename,"-") == 0 ? "standard input":filename);
+    exit(-1); 
 }
 
 //handles the parital write case 
@@ -62,6 +62,7 @@ void concatenate(int* outputFileD, char* inputFileName){
     while(n > 0) { // while there is data to read
         binary = binary ? binary : checkForBinary(buf,inputFileName,n);
         int wn = write(*outputFileD,buf,n); 
+        if(wn < 0) return writeError(inputFileName); 
         if(wn != n)  // if correct amount of bytes were not written 
             partialWrite(&writeCount, outputFileD,buf,n,wn,inputFileName); 
         byteCount += n; 
