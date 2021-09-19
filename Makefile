@@ -5,4 +5,4 @@ kitty: kitty.c
 	gcc -o kitty kitty.c
 
 clean: 
-	rm -f kitty *.txt
+	rm -f kitty

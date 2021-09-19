@@ -7,7 +7,8 @@
 #include <string.h> 
 
 #define BATCHSIZE 4096
-
+enum ErrorType{WRITE,READ,OPEN,CLOSE};
+char* names[] = {"writing", "reading","opening","closing"}; 
 
 //prints the standard message after finishing reading a file
 void printMSG (int readCount,int writeCount,int byteCount,char * filename, bool binary){
@@ -16,16 +17,36 @@ void printMSG (int readCount,int writeCount,int byteCount,char * filename, bool 
         fprintf(stderr,"WARNING THE FILE %s CONTAINS BINARY DATA\n",strcmp(filename,"-") == 0 ? "standard input":filename); 
 }
 
-//prints a message for an error opening a file 
-void openError(char* filename){
-    fprintf(stderr, "Error opening file %s \n",strcmp(filename,"-") == 0 ? "standard input":filename); 
+// Prints generic error message 
+void error(char * filename, enum ErrorType type ){
+    fprintf(stderr,"Error %s file %s\n",names[type],strcmp(filename,"-") == 0 ? "standard input":filename);
     exit(-1); 
 }
 
-//prints an error for writting to a file 
-void writeError(char* filename){
-    fprintf(stderr,"Error writing to file %s\n", strcmp(filename,"-") == 0 ? "standard input":filename);
-    exit(-1); 
+// handles opening files 
+int myOpen(char* filename,int oflag){
+    int fd = open(filename,oflag,0666); 
+    if(fd < 0) error(filename,OPEN); 
+    return fd;
+}
+
+// handles writing files 
+int myWrite(int* fd, char* buf, int size,char* filename, int* writeCount){
+    int n = write(*fd,buf,size);
+    (*writeCount)++; 
+    if(n<0) error(filename,WRITE); 
+    return n; 
+}
+// handles reading files 
+int myRead(int* fd,char* buf,int size,char* filename, int* readCount){
+    int n = read(*fd,buf,size);
+    (*readCount)++; 
+    if(n<0) error(filename,READ); 
+    return n; 
+}
+// hanles closing files 
+void myClose(int* fd,char* filename){
+    if(close(*fd) < 0) error(filename,CLOSE); 
 }
 
 //handles the parital write case 
@@ -34,61 +55,51 @@ void partialWrite(int* writeCount, int* outputFileD, char* buf, int readLen,int 
     int i;
     for(i = writeLen; i<readLen; i++)
         newBuf[i-writeLen] = buf[i]; 
-    int wn = write(*outputFileD,newBuf,readLen-writeLen); 
-    *writeCount++; 
-    if(wn < 0 || wn != readLen-writeLen) // idk if I am supposed to add this or of if the second one should just never happen
-        writeError(inputFileName); 
+    int wn = myWrite(outputFileD,newBuf,readLen-writeLen,inputFileName,writeCount); 
+    if(wn != readLen-writeLen) error(inputFileName,WRITE); 
 }
 
 //returns true if the file contains binary characters 
 bool checkForBinary(char* buf, char* fileName, int size){
     int i;
     for(i = 0; i<size; i++){
-        if(!(isprint(buf[i])||isspace(buf[i]))){
-            return true; 
-            break; 
-        }
+        if(!(isprint(buf[i])||isspace(buf[i]))) return true; 
     }
     return false; 
 }
 
 //writes the contents of a input file to an output file 
 void concatenate(int* outputFileD, char* inputFileName){
-    int fdI = strcmp(inputFileName,"-") != 0 ? open(inputFileName,O_RDONLY,0666) : STDIN_FILENO; // opens the input file 
-    if(fdI < 0) openError(inputFileName); 
+    int fdI = strcmp(inputFileName,"-") != 0 ? myOpen(inputFileName,O_RDONLY) : STDIN_FILENO; // opens the input file 
     char buf[BATCHSIZE]; 
-    int byteCount = 0,writeCount = 0,n = read(fdI,buf,BATCHSIZE),readCount = 1; 
+    int readCount = 0; 
+    int byteCount = 0; 
+    int writeCount = 0;
+    int n = myRead(&fdI,buf,BATCHSIZE,inputFileName,&readCount);
     bool binary = false; 
     while(n > 0) { // while there is data to read
         binary = binary ? binary : checkForBinary(buf,inputFileName,n);
-        int wn = write(*outputFileD,buf,n); 
-        if(wn < 0) return writeError(inputFileName); 
+        int wn = myWrite(outputFileD,buf,n,inputFileName,&writeCount); 
         if(wn != n)  // if correct amount of bytes were not written 
             partialWrite(&writeCount, outputFileD,buf,n,wn,inputFileName); 
         byteCount += n; 
-        writeCount++; 
         if(n < BATCHSIZE) break;  // if we didn't read the full amount (meaning we reached EOF)
-        n = read(fdI,buf,BATCHSIZE);
-        readCount++; 
+        n = myRead(&fdI,buf,BATCHSIZE,inputFileName,&readCount);
     }
     if(strcmp(inputFileName,"-") != 0) // if the file isn't standard input close the file 
-        close(fdI);
+        myClose(&fdI,inputFileName); 
+    
     printMSG(readCount,writeCount,byteCount,inputFileName,binary); 
 }
 
 int main(int argc, char *argv[]){
-    int c; 
-    bool oFlag = false;
+    int c,i; 
     int outputFile = STDOUT_FILENO;
-    char* outputFileName = NULL; 
     while ((c = getopt (argc, argv, "o:")) != -1){  // check for the o option 
-        if(c == 'o') {
-            outputFileName = optarg;
-            outputFile = open(optarg,O_WRONLY|O_CREAT|O_TRUNC,0666);  // opens the output file if it exists 
-            oFlag = true; 
-        } else abort(); // if other flags are present abort 
+        if(c == 'o') 
+            outputFile = myOpen(optarg,O_WRONLY|O_CREAT|O_TRUNC);  // opens the output file if it exists 
+        else abort(); // if other flags are present abort 
     }
-    int i; 
     for(i = optind; i<argc; i++)
         concatenate(&outputFile,argv[i]); 
 
