@@ -72,9 +72,7 @@ bool checkForBinary(char* buf, char* fileName, int size){
 void concatenate(int* outputFileD, char* inputFileName){
     int fdI = strcmp(inputFileName,"-") != 0 ? myOpen(inputFileName,O_RDONLY) : STDIN_FILENO; // opens the input file 
     char buf[BATCHSIZE]; 
-    int readCount = 0; 
-    int byteCount = 0; 
-    int writeCount = 0;
+    int readCount = 0,byteCount = 0,writeCount = 0;
     int n = myRead(&fdI,buf,BATCHSIZE,inputFileName,&readCount);
     bool binary = false; 
     while(n > 0) { // while there is data to read
