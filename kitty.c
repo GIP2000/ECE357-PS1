@@ -31,7 +31,8 @@ void writeError(char* fileName){
 //handles the parital write case 
 void partialWrite(int* writeCount, int* outputFileD, char* buf, int readLen,int writeLen, char* inputFileName){
     char newBuf[readLen-writeLen]; 
-    for(int i = writeLen; i<readLen; i++)
+    int i;
+    for(i = writeLen; i<readLen; i++)
         newBuf[i-writeLen] = buf[i]; 
     int wn = write(*outputFileD,newBuf,readLen-writeLen); 
     *writeCount++; 
@@ -41,7 +42,8 @@ void partialWrite(int* writeCount, int* outputFileD, char* buf, int readLen,int 
 
 //returns true if the file contains binary characters 
 bool checkForBinary(char* buf, char* fileName, int size){
-    for(int i = 0; i<size; i++){
+    int i;
+    for(i = 0; i<size; i++){
         if(!(isprint(buf[i])||isspace(buf[i]))){
             return true; 
             break; 
@@ -85,10 +87,10 @@ int main(int argc, char *argv[]){
             oFlag = true; 
         } else abort(); // if other flags are present abort 
     }
-
-    for(int i = optind; i<argc; i++)
+    int i; 
+    for(i = optind; i<argc; i++)
         concatenate(&outputFile,argv[i]); 
-        
+
     if(optind == argc) // if there were no other arguments then default to standard input
         concatenate(&outputFile,"-");
     exit(0); 
