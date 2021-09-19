@@ -75,7 +75,7 @@ void concatenate(int* outputFileD, char* inputFileName){
 
 int main(int argc, char *argv[]){
     int c; 
-    bool oFlag = false,once = false;
+    bool oFlag = false;
     int outputFile = STDOUT_FILENO;
     char* outputFileName = NULL; 
     while ((c = getopt (argc, argv, "o:")) != -1){  // check for the o option 
@@ -85,14 +85,11 @@ int main(int argc, char *argv[]){
             oFlag = true; 
         } else abort(); // if other flags are present abort 
     }
-    
-    for(int i = optind; i<argc; i++){
-        if(oFlag && strcmp(argv[i],outputFileName) == 0)  // skip if the output file is the same as the input file
-            continue; 
-        once = true;
+
+    for(int i = optind; i<argc; i++)
         concatenate(&outputFile,argv[i]); 
-    }
-    if(!once) // if there were no other arguments then default to standard input
+        
+    if(optind == argc) // if there were no other arguments then default to standard input
         concatenate(&outputFile,"-");
     exit(0); 
 }
